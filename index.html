@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🍕 LimurCoin O'yini</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f4f4f4;
+      margin: 0; padding: 20px;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    h1 { margin-bottom: 10px; }
+    #coinDisplay, #highScore, #dailyBonusTimer {
+      font-size: 18px; margin: 5px 0;
+      text-align: center;
+      cursor: pointer;
+    }
+    #coinDisplay img {
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      margin-top: 5px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      transition: transform 0.1s ease;
+    }
+    #coinDisplay img:active {
+      transform: scale(0.95);
+    }
+    .boosters {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .booster {
+      background: white;
+      border-radius: 10px;
+      padding: 10px;
+      text-align: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .booster img { width: 80px; height: 80px; margin-bottom: 5px; }
+    button {
+      margin: 5px;
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .nav {
+      position: fixed;
+      bottom: 0;
+      left: 0; right: 0;
+      background: #fff;
+      display: flex;
+      justify-content: space-around;
+      padding: 10px 0;
+      box-shadow: 0 -2px 6px rgba(0,0,0,0.1);
+    }
+    .nav button {
+      flex: 1;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🍕 LimurClicker</h1>
+  <div id="coinDisplay" onclick="collectCoin(event)" ontouchstart="collectCoin(event)">
+    💰 Coin: <span id="coinCount">0</span><br>
+    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJYAAACWCAYAAAA8AXHiAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAL6AAAC+gBqKloXAAAABl0RVh0U29mdHdhcmUAUGFpbnQuTkVUIHYzLjM2qefiJQAAABl0RVh0Q3JlYXRpb24gVGltZQAwOC8xMC8xNf5n+isAAAAgdEVYdFNvZnR3YXJlAFAxIDMuMy42bRG8EwAAAA2SURBVHja7cExAQAAAMKg9U9tCF8gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADALwCMAAGZZpVYAAAAAElFTkSuQmCC" alt="Pizza" />
+  </div>
+
+  <div id="highScore">🏆 High Score: 0</div>
+  <div id="dailyBonusTimer">🎁 Bonus: tayyor</div>
+
+  <button onclick="getDailyBonus()">🎁 Kunlik bonus (10,000)</button>
+  <button onclick="visitTelegram()">📣 Telegram → 500,000</button>
+  <button onclick="visitInstagram()">📸 Instagram → 500,000</button>
+
+  <div class="boosters" id="boosterContainer"></div>
+
+  <div class="nav">
+    <button onclick="showMain()">🏠 Asosiy</button>
+    <button onclick="showBoosters()">🚀 Boostlar</button>
+  </div>
+
+  <audio id="clickSound" src="https://www.soundjay.com/buttons/sounds/button-16.mp3"></audio>
+
+  <script>
+    const boosters = [
+      { id: 1, name: "⚡ Tezlik", cost: 100, cps: 1, img: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iMzUiIGZpbGw9IiNmZjgwMDAiLz48dGV4dCB4PSIyMCIgeT0iNDUiIGZvbnQtc2l6ZT0iMjAiIGZpbGw9IndoaXRlIj7ilp8gPC90ZXh0Pjwvc3ZnPg==" },
+      { id: 2, name: "🔥 Energiya", cost: 250, cps: 2, img: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iMzUiIGZpbGw9IiNmZjQwMDAiLz48dGV4dCB4PSIyMCIgeT0iNDUiIGZvbnQtc2l6ZT0iMjAiIGZpbGw9IndoaXRlIj7ilp8gPC90ZXh0Pjwvc3ZnPg==" },
+      { id: 3, name: "🌟 Super", cost: 500, cps: 5, img: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iMzUiIGZpbGw9IiNmZjgwZDAiLz48dGV4dCB4PSIyMCIgeT0iNDUiIGZvbnQtc2l6ZT0iMjAiIGZpbGw9IndoaXRlIj7ilp8gPC90ZXh0Pjwvc3ZnPg==" },
+      { id: 4, name: "💎 Premium", cost: 1000, cps: 10, img: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjMDBmZmZmIi8+PHRleHQgeD0iMTUiIHk9IjQ1IiBmb250LXNpemU9IjIwIiBmaWxsPSJ3aGl0ZSI+8J+NiPC90ZXh0Pjwvc3ZnPg==" },
+      { id: 5, name: "🐒 LemurBot", cost: 2000, cps: 20, img: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iMzUiIGZpbGw9IiM5Yjk3NDAiLz48dGV4dCB4PSIyMCIgeT0iNDUiIGZvbnQtc2l6ZT0iMjAiIGZpbGw9IndoaXRlIj7ilp8gPC90ZXh0Pjwvc3ZnPg==" },
+      { id: 6, name: "🚀 Rocket", cost: 4000, cps: 40, img: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iMzUiIGZpbGw9IiNmZjY2MDAiLz48dGV4dCB4PSIyMCIgeT0iNDUiIGZvbnQtc2l6ZT0iMjAiIGZpbGw9IndoaXRlIj7ilp8gPC90ZXh0Pjwvc3ZnPg==" },
+      { id: 7, name: "💡 Idea", cost: 8000, cps: 80, img: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iMzUiIGZpbGw9IiNmZmZjMDAiLz48dGV4dCB4PSIyMCIgeT0iNDUiIGZvbnQtc2l6ZT0iMjAiIGZpbGw9IndoaXRlIj7ilp8gPC90ZXh0Pjwvc3ZnPg==" },
+      { id: 8, name: "🎯 Target", cost: 16000, cps: 160, img: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iMzUiIGZpbGw9IiNmZjAwMDAiLz48dGV4dCB4PSIyMCIgeT0iNDUiIGZvbnQtc2l6ZT0iMjAiIGZpbGw9IndoaXRlIj7ilp8gPC90ZXh0Pjwvc3ZnPg==" },
+      { id: 9, name: "🛡 Shield", cost: 32000, cps: 320, img: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjMDA4ZmZmIi8+PHRleHQgeD0iMTUiIHk9IjQ1IiBmb250LXNpemU9IjIwIiBmaWxsPSJ3aGl0ZSI+8J+RiPC90ZXh0Pjwvc3ZnPg==" },
+      { id: 10, name: "⚔ Sword", cost: 64000, cps: 640, img: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iMzUiIGZpbGw9IiNmZjAwZjAwIi8+PHRleHQgeD0iMjAiIHk9IjQ1IiBmb250LXNpemU9IjIwIiBmaWxsPSJ3aGl0ZSI+8J+ViPC90ZXh0Pjwvc3ZnPg==" },
+      { id: 11, name: "🌈 Rainbow", cost: 128000, cps: 1280, img: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iMzUiIGZpbGw9IiNmZjAwZmZmIi8+PHRleHQgeD0iMjAiIHk9IjQ1IiBmb250LXNpemU9IjIwIiBmaWxsPSJ3aGl0ZSI+8J+XiPC90ZXh0Pjwvc3ZnPg==" },
+      { id: 12, name: "🎉 Party", cost: 256000, cps: 2560, img: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iMzUiIGZpbGw9IiNmZjZmZmYwIi8+PHRleHQgeD0iMjAiIHk9IjQ1IiBmb250LXNpemU9IjIwIiBmaWxsPSJ3aGl0ZSI+8J+ciPC90ZXh0Pjwvc3ZnPg==" },
+      { id: 13, name: "🧙‍♂️ Wizard", cost: 512000, cps: 5120, img: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iMzUiIGZpbGw9IiMwMDA5ZmYiLz48dGV4dCB4PSIyMCIgeT0iNDUiIGZvbnQtc2l6ZT0iMjAiIGZpbGw9IndoaXRlIj7ilp8gPC90ZXh0Pjwvc3ZnPg==" },
+      { id: 14, name: "🎮 Gamer", cost: 1024000, cps: 10240, img: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iMzUiIGZpbGw9IiNmZjAwZmYiLz48dGV4dCB4PSIyMCIgeT0iNDUiIGZvbnQtc2l6ZT0iMjAiIGZpbGw9IndoaXRlIj7ilp8gPC90ZXh0Pjwvc3ZnPg==" },
+      { id: 15, name: "👑 King", cost: 2048000, cps: 20480, img: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iMzUiIGZpbGw9IiNmZjY2NjAiLz48dGV4dCB4PSIyMCIgeT0iNDUiIGZvbnQtc2l6ZT0iMjAiIGZpbGw9IndoaXRlIj7ilp8gPC90ZXh0Pjwvc3ZnPg==" },
+      { id: 16, name: "💰 Money", cost: 4096000, cps: 40960, img: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iMzUiIGZpbGw9IiNmZmY3MDAiLz48dGV4dCB4PSIyMCIgeT0iNDUiIGZvbnQtc2l6ZT0iMjAiIGZpbGw9IndoaXRlIj7ilp8gPC90ZXh0Pjwvc3ZnPg==" }
+    ];
+
+    let coins = 0;
+    let highScore = 0;
+    let boosterLevels = {};
+    let dailyBonusAvailable = true;
+    let dailyBonusCooldown = 24 * 60 * 60 * 1000; // 24 soat
+    let dailyBonusLastClaim = 0;
+    let telegramBonusClaimed = false;
+    let instagramBonusClaimed = false;
+
+    const coinCountSpan = document.getElementById("coinCount");
+    const highScoreDiv = document.getElementById("highScore");
+    const dailyBonusTimer = document.getElementById("dailyBonusTimer");
+    const boosterContainer = document.getElementById("boosterContainer");
+    const clickSound = document.getElementById("clickSound");
+
+    // Load from localStorage
+    function loadGame() {
+      coins = parseInt(localStorage.getItem("coins")) || 0;
+      highScore = parseInt(localStorage.getItem("highScore")) || 0;
+      boosterLevels = JSON.parse(localStorage.getItem("boosterLevels")) || {};
+      dailyBonusLastClaim = parseInt(localStorage.getItem("dailyBonusLastClaim")) || 0;
+      telegramBonusClaimed = localStorage.getItem("telegramBonusClaimed") === "true";
+      instagramBonusClaimed = localStorage.getItem("instagramBonusClaimed") === "true";
+
+      updateCoinCount();
+      updateBoosters();
+      updateDailyBonus();
+      updateHighScore();
+    }
+
+    // Save to localStorage
+    function saveGame() {
+      localStorage.setItem("coins", coins);
+      localStorage.setItem("highScore", highScore);
+      localStorage.setItem("boosterLevels", JSON.stringify(boosterLevels));
+      localStorage.setItem("dailyBonusLastClaim", dailyBonusLastClaim);
+      localStorage.setItem("telegramBonusClaimed", telegramBonusClaimed);
+      localStorage.setItem("instagramBonusClaimed", instagramBonusClaimed);
+    }
+
+    // Update coin display
+    function updateCoinCount() {
+      coinCountSpan.textContent = coins.toLocaleString();
+      if (coins > highScore) {
+        highScore = coins;
+        updateHighScore();
+      }
+    }
+
+    // Update high score display
+    function updateHighScore() {
+      highScoreDiv.textContent = "High Score: " + highScore.toLocaleString();
+    }
+
+    // Update boosters display
+    function updateBoosters() {
+      boosterContainer.innerHTML = "";
+      boosters.forEach((booster) => {
+        const boosterDiv = document.createElement("div");
+        boosterDiv.className = "booster";
+        boosterDiv.innerHTML = `
+          <img src="${booster.img}" alt="${booster.name}" class="booster-img" />
+          <div class="booster-info">
+            <div class="booster-name">${booster.name}</div>
+            <div class="booster-cost">Cost: ${booster.cost.toLocaleString()}</div>
+            <div class="booster-cps">Coins/s: ${booster.cps}</div>
+            <button class="buy-button" data-id="${booster.id}">Buy</button>
+          </div>
+        `;
+        boosterContainer.appendChild(boosterDiv);
+
+        // Disable button if not enough coins
+        const buyButton = boosterDiv.querySelector(".buy-button");
+        buyButton.disabled = coins < booster.cost || boosterLevels[booster.id];
+        buyButton.addEventListener("click", () => buyBooster(booster.id));
+      });
+    }
+
+    // Buy booster
+    function buyBooster(id) {
+      const booster = boosters.find(b => b.id === id);
+      if (!booster) return;
+      if (coins >= booster.cost && !boosterLevels[id]) {
+        coins -= booster.cost;
+        boosterLevels[id] = true;
+        updateCoinCount();
+        updateBoosters();
+        saveGame();
+      }
+    }
+
+    // Daily bonus update
+    function updateDailyBonus() {
+      const now = Date.now();
+      if (now - dailyBonusLastClaim >= dailyBonusCooldown) {
+        dailyBonusAvailable = true;
+        dailyBonusTimer.textContent = "Daily bonus available!";
+      } else {
+        dailyBonusAvailable = false;
+        const remaining = dailyBonusCooldown - (now - dailyBonusLastClaim);
+        const hours = Math.floor(remaining / 3600000);
+        const minutes = Math.floor((remaining % 3600000) / 60000);
+        const seconds = Math.floor((remaining % 60000) / 1000);
+        dailyBonusTimer.textContent = `Next bonus in: ${hours}h ${minutes}m ${seconds}s`;
+      }
+    }
+
+    // Claim daily bonus
+    function claimDailyBonus() {
+      if (dailyBonusAvailable) {
+        coins += 10000;
+        dailyBonusLastClaim = Date.now();
+        updateCoinCount();
+        updateDailyBonus();
+        saveGame();
+      } else {
+        alert("Daily bonus is not yet available.");
+      }
+    }
+
+    // Visit Telegram bonus
+    function claimTelegramBonus() {
+      if (!telegramBonusClaimed) {
+        coins += 500000;
+        telegramBonusClaimed = true;
+        updateCoinCount();
+        saveGame();
+        alert("Telegram bonus claimed!");
+      } else {
+        alert("Telegram bonus already claimed.");
+      }
+    }
+
+    // Visit Instagram bonus
+    function claimInstagramBonus() {
+      if (!instagramBonusClaimed) {
+        coins += 500000;
+        instagramBonusClaimed = true;
+        updateCoinCount();
+        saveGame();
+        alert("Instagram bonus claimed!");
+      } else {
+        alert("Instagram bonus already claimed.");
+      }
+    }
+
+    // Handle pizza click
+    const pizzaImage = document.getElementById("pizzaImage");
+    pizzaImage.addEventListener("click", () => {
+      coins++;
+      updateCoinCount();
+      clickSound.play();
+      saveGame();
+    });
+
+    // Auto coin increase from boosters
+    setInterval(() => {
+      boosters.forEach((booster) => {
+        if (boosterLevels[booster.id]) {
+          coins += booster.cps;
+        }
+      });
+      updateCoinCount();
+      saveGame();
+    }, 1000);
+
+    // Initial load
+    loadGame();
+
+    // Daily bonus button
+    document.getElementById("dailyBonus").addEventListener("click", claimDailyBonus);
+
+    // Telegram bonus button
+    document.getElementById("telegramLink").addEventListener("click", () => {
+      window.open("https://t.me/yourtelegramchannel", "_blank");
+      claimTelegramBonus();
+    });
+
+    // Instagram bonus button
+    document.getElementById("instagramLink").addEventListener("click", () => {
+      window.open("https://instagram.com/yourinstagramprofile", "_blank");
+      claimInstagramBonus();
+    });
+
+    // Update daily bonus timer every second
+    setInterval(updateDailyBonus, 1000);
+
+  </script>
+</body>
+</html>
